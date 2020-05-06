@@ -4,7 +4,8 @@
   "description": "A transcribe api",
   "main": "index.js",
   "dependencies": {
-    "aws-sdk": "^2.668.0"
+    "aws-sdk": "^2.668.0",
+    "unirest": "^0.6.0"
   },
   "devDependencies": {},
   "scripts": {
