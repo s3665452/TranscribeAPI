@@ -7,7 +7,7 @@ var summary = 'sample summary';
 var source_video_url = "sample source url";
 var transcriptionJobName = 'TranscribeTest1';
 var outputBucketName = 's3665452-transcript';
-var transcript1 = "sffd";
+//var transcript1 = "sffd";
 //call to wait
 // function wait(ms){
 //    var start = new Date().getTime();
@@ -21,9 +21,9 @@ function sleep(ms) {
 }
 //set up amazon
 AWS.config.update({region:'us-east-1',
-accessKeyId: 'ASIA4CWIRGO4I6IF76UT',
-  secretAccessKey: 'wZZcdCp7Mo8dxlrB0R/en9+l18WUwBWD7ZwrkndJ',
-  sessionToken: 'FwoGZXIvYXdzEHIaDNmRmbo8/51Uu9WK3CLLAbDOAkMQR0SPzj+sykuBjTE6yeVv5B+Iq20hXQ94Q00ELkiP4PPyCJlAwAptw5gG/YuZSkhMZVTaCDndAlFgPZgKWzs/KPc6RownZjNQu5+jr+IIgv8wd2dlRiac8/TCwTdRRgwP4GM7ElQmzYifT2zhv8oH1HgM0hhmhmHogfXNFCk8S3Bcxdwt2b8hPRpxUAVVP3tzF+RpgEi1lx8+U5YJyxek3l4d7gVvRU+6l2yQGVY1LH5ApLmFJ1dY0UDtb44sP6kA4pvpwSEwKMyGyPUFMi13HMBolLBpVS7SBd6GCAu8Q5HMPDUOaZOV5AVOR2p05qs/QpJ09rP/3ULK0fk='});
+accessKeyId: 'ASIA4CWIRGO4LF57VFV6',
+  secretAccessKey: 'r0NnQ6Tq/j0T++PF/4qq8gYowOj6JJSWaKfPoS57',
+  sessionToken: 'FwoGZXIvYXdzEJL//////////wEaDDjGWFz7ZTzkcRd5viLLAW0SUVWFCyEC4GCovKI79CaA1H/gXwjnaj9X1p6eLAtK8kNpoTlu9spuYZktJAL6hdhpBwrfgPvHHkUq9opDLfjRxYjP3Otv1A0uO1xXsJuH3ClrNnNI5PVM0H2iqiBVKKSiT//6oCOQTPkSYdwD4zw81A7HywItzJmeOunUJmAegSeCABLhtJi4zMk3rSjpz2tGAxdLM7GB/rz197510iJ5ECWzdjqQtiuIKITkLBMtUiwYERWErUCB8pu9/YVilh8L9A0+0WA5PJ5fKMCOz/UFMi2thhODfiso8+7ex3K6tu1bXrLMBnt4aKBws5DZXkwkBDSkSOruf9oSvLnV+b4='});
 //transcribe media file
   function transcribe(mediaFileUrl, transcriptionJobName, outputBucketName) {
   var transcribeservice = new AWS.TranscribeService({apiVersion: '2017-10-26'});
@@ -53,19 +53,42 @@ await s3.getObject(params_s3, function(err, data) {
   if (err) console.log(err, err.stack); // an error occurred
   else     transcript = JSON.stringify(JSON.parse(data.Body.toString('ascii')).results.transcripts)
   console.log(transcript);   // successful response
-  transcript1 = transcript.slice(0, transcript.length/2);
+//  transcript1 = transcript.slice(0, transcript.length/2);
 });
 }
 //wait(1500);
 
 function summarize() {
 
-var req = unirest("GET", "https://aylien-text.p.rapidapi.com/summarize");
+  var transcriptArray = new Array();
+  var transcript1 = transcript;
+  const limit = 5000;
+
+  while(transcript1.length>limit) {
+  var slice = transcript1.slice(0, limit);
+  transcript1 = transcript1.slice(limit);
+  transcriptArray.push(slice);
+  }
+  transcriptArray.push(transcript1);
+
+  transcriptArray.forEach(getSummary);
+
+
+  // function print(item, index) {
+  //   console.log("partttttttttt");
+  //   console.log(item);
+  // }
+
+async function getSummary(item, index) {
+  await sleep(index*1000);
+  console.log(item);
+  console.log("parttttttt");
+  var req = unirest("GET", "https://aylien-text.p.rapidapi.com/summarize");
 
 req.query({
 	"title": "test",
-	"text": transcript1,
-	"sentences_percentage": "20"
+	"text": item,
+	"sentences_percentage": "10"
 });
 
 req.headers({
@@ -77,10 +100,11 @@ req.headers({
 req.end(function (res) {
 	if (res.error) throw new Error(res.error);
 
-	console.log(res.body);
+//	console.log(res.body);
   console.log(res.body.sentences);
-  summary = JSON.stringify(res.body.sentences);
+  summary = summary + "," + JSON.stringify(res.body.sentences);
 });
+}
  }
 
 
@@ -111,12 +135,13 @@ exports.handler = async (event) => {
      source_video_url = event.queryStringParameters.link;
     // transcribe(video_s3_url, transcriptionJobName, outputBucketName);
     // await sleep(15000);
-     getFile();
-     await sleep(10000);
-  summarize();
-  await sleep(15000);
-  upload();
-  //   await sleep(15000);
+    getFile();
+    await sleep(5000);
+   summarize();
+   await sleep(5000);
+   upload();
+   console.log(summary);
+   await sleep(1000);
         return getTranscribe(event);
     }
 };
@@ -136,10 +161,11 @@ exports.handler = async (event) => {
  }
 async function test() {
  getFile();
- await sleep(15000);
+ await sleep(5000);
 summarize();
-await sleep(15000);
+await sleep(5000);
 upload();
+console.log(summary);
 }
 
 //test();
