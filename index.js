@@ -3,10 +3,12 @@ var unirest = require("unirest");
 //video in s3 bucket
 var video_s3_url = 'https://s3665452-video.s3.amazonaws.com/6cd99979-e6c6-4f16-94f0-826ab34f55ff_1_200402T084119924Z.mp4';
 var transcript = 'sample transcript';
-var summary = 'sample summary';
+var summary = 's';
 var source_video_url = "sample source url";
 var transcriptionJobName = 'TranscribeTest1';
 var outputBucketName = 's3665452-transcript';
+var nextPart = "sample";
+var key = "sample key";
 //var transcript1 = "sffd";
 //call to wait
 // function wait(ms){
@@ -21,9 +23,9 @@ function sleep(ms) {
 }
 //set up amazon
 AWS.config.update({region:'us-east-1',
-accessKeyId: 'ASIA4CWIRGO4LF57VFV6',
-  secretAccessKey: 'r0NnQ6Tq/j0T++PF/4qq8gYowOj6JJSWaKfPoS57',
-  sessionToken: 'FwoGZXIvYXdzEJL//////////wEaDDjGWFz7ZTzkcRd5viLLAW0SUVWFCyEC4GCovKI79CaA1H/gXwjnaj9X1p6eLAtK8kNpoTlu9spuYZktJAL6hdhpBwrfgPvHHkUq9opDLfjRxYjP3Otv1A0uO1xXsJuH3ClrNnNI5PVM0H2iqiBVKKSiT//6oCOQTPkSYdwD4zw81A7HywItzJmeOunUJmAegSeCABLhtJi4zMk3rSjpz2tGAxdLM7GB/rz197510iJ5ECWzdjqQtiuIKITkLBMtUiwYERWErUCB8pu9/YVilh8L9A0+0WA5PJ5fKMCOz/UFMi2thhODfiso8+7ex3K6tu1bXrLMBnt4aKBws5DZXkwkBDSkSOruf9oSvLnV+b4='});
+accessKeyId: 'ASIA4CWIRGO4EKPOBXPF',
+  secretAccessKey: 'pCbhwsGHIwPYAUeQEjvcxmql7XcdZWe0FwGouUDK',
+  sessionToken: 'FwoGZXIvYXdzEEkaDMf/SnADl3b0nPfG7SLLAducadZzteJCcWo/m4fwe0mOq9O5piuIuCkzSfPTgrBVRxfIYAb96RhyPyGsH9q6pCTofPMKEzOyddVlm8xYeAkzzubKtHeSoAGfNa9qXTfNAHqqVAxFL+JLCEi+P4O8uu/fUCTbRDa3mj6Lb1J3Gz0bBs7z4PhqrKR2cagDAkB2t0ymDmhOTgL7wt+d+5zXmUZh2xuqnYNLq7MsfdQhgl4QT2DGRb4gDIKIdw/mZDi/m5kStETHA+pInsT6bgh6aeefFalXD/m6FFXfKIa09/UFMi2jlSwVMqjbZSC7LnV97Eu6USDB2ReGiIMOcl685DPBlXEcAK6r2QdC0AEy8+0='});
 //transcribe media file
   function transcribe(mediaFileUrl, transcriptionJobName, outputBucketName) {
   var transcribeservice = new AWS.TranscribeService({apiVersion: '2017-10-26'});
@@ -52,6 +54,7 @@ var params_s3 = await {Bucket: outputBucketName, Key: transcriptionJobName + '.j
 await s3.getObject(params_s3, function(err, data) {
   if (err) console.log(err, err.stack); // an error occurred
   else     transcript = JSON.stringify(JSON.parse(data.Body.toString('ascii')).results.transcripts)
+  transcript = transcript.slice(15, transcript.length-2);
   console.log(transcript);   // successful response
 //  transcript1 = transcript.slice(0, transcript.length/2);
 });
@@ -70,7 +73,7 @@ function summarize() {
   transcriptArray.push(slice);
   }
   transcriptArray.push(transcript1);
-
+  summary = " ";
   transcriptArray.forEach(getSummary);
 
 
@@ -80,9 +83,9 @@ function summarize() {
   // }
 
 async function getSummary(item, index) {
-  await sleep(index*1000);
-  console.log(item);
-  console.log("parttttttt");
+  await sleep(index*500);
+  //console.log(item);
+  //console.log("parttttttt");
   var req = unirest("GET", "https://aylien-text.p.rapidapi.com/summarize");
 
 req.query({
@@ -101,8 +104,14 @@ req.end(function (res) {
 	if (res.error) throw new Error(res.error);
 
 //	console.log(res.body);
-  console.log(res.body.sentences);
-  summary = summary + "," + JSON.stringify(res.body.sentences);
+  //console.log(res.body.sentences);
+  nextPart = JSON.stringify(res.body.sentences);
+  nextPart = nextPart.slice(2, nextPart.length-1);
+//  nextPart = nextPart;
+//  console.log("nexrtttttt:" + nextPart);
+  summary = summary.slice(0, summary.length-1);
+  summary = summary + "," + nextPart;
+  //console.log("test1: " + summary);
 });
 }
  }
@@ -114,7 +123,7 @@ function upload() {
   var params_ddb = {
     TableName: 'Transcripts',
     Item: {
-      'Link' : {S: source_video_url},
+      'Link' : {S: key},
       'Transcript' : {S: transcript},
       'Summary' : {S: summary}
     }
@@ -133,6 +142,7 @@ ddb.putItem(params_ddb, function(err, data) {
 exports.handler = async (event) => {
     if (event.httpMethod === "GET") {
      source_video_url = event.queryStringParameters.link;
+     key = source_video_url.slice(0, source_video_url.length-19);
     // transcribe(video_s3_url, transcriptionJobName, outputBucketName);
     // await sleep(15000);
     getFile();
@@ -140,7 +150,7 @@ exports.handler = async (event) => {
    summarize();
    await sleep(5000);
    upload();
-   console.log(summary);
+  // console.log(summary);
    await sleep(1000);
         return getTranscribe(event);
     }
