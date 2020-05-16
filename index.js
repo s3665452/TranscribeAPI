@@ -9,6 +9,7 @@ var transcriptionJobName = 'TranscribeTest1';
 var outputBucketName = 's3665452-transcript';
 var nextPart = "sample";
 var key = "sample key";
+var transcriptArray = new Array();
 //var transcript1 = "sffd";
 //call to wait
 // function wait(ms){
@@ -23,9 +24,43 @@ function sleep(ms) {
 }
 //set up amazon
 AWS.config.update({region:'us-east-1',
-accessKeyId: 'ASIA4CWIRGO4EKPOBXPF',
-  secretAccessKey: 'pCbhwsGHIwPYAUeQEjvcxmql7XcdZWe0FwGouUDK',
-  sessionToken: 'FwoGZXIvYXdzEEkaDMf/SnADl3b0nPfG7SLLAducadZzteJCcWo/m4fwe0mOq9O5piuIuCkzSfPTgrBVRxfIYAb96RhyPyGsH9q6pCTofPMKEzOyddVlm8xYeAkzzubKtHeSoAGfNa9qXTfNAHqqVAxFL+JLCEi+P4O8uu/fUCTbRDa3mj6Lb1J3Gz0bBs7z4PhqrKR2cagDAkB2t0ymDmhOTgL7wt+d+5zXmUZh2xuqnYNLq7MsfdQhgl4QT2DGRb4gDIKIdw/mZDi/m5kStETHA+pInsT6bgh6aeefFalXD/m6FFXfKIa09/UFMi2jlSwVMqjbZSC7LnV97Eu6USDB2ReGiIMOcl685DPBlXEcAK6r2QdC0AEy8+0='});
+accessKeyId: 'ASIA4CWIRGO4IWQJAIWM',
+  secretAccessKey: 'UDWCtbOr77NVXJ6LSxEpmXonMae1lL2N1vc0zj8P',
+  sessionToken: 'FwoGZXIvYXdzEGkaDF2Nk1fv80Pe+crrUiLLAZCCoekoFH6q+eC08OdnDMbonwMB7R+7wH2XNH65ZTj9KAMVYABtNV0A+CgqcQDDlIoe/V82AIQydn4UOhxVAuGITvFe+j/8Q+BMyluEhPqMKrhctLkyAiPOeiHfRwf0dHN7phlSYtkq8mfA3OSHmKIZjUTzOxrzlIjoKXw4USU2dNeNkVi1v6cjosWC4mbRT0af7q63SplZlqY3y4b6BQewi/+OU7CHGm0f1M23LB9Z28GeunoQmYAVgizquIb0vwFU4v2ckASUPhwSKP+3/vUFMi0MVq7UHhYWj2g/omNzNZU90hWXAmEyX59G/E9vFIbETnZ51qZok4sTLc2Cmh0='});
+
+var ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+
+function getFromDB() {
+  try {
+  var params = {
+ Key: {
+  "Link": {
+    S: key
+   }
+ },
+ TableName: "Transcripts"
+};
+
+ddb.getItem(params, function(err, data) {
+  if (err) {
+    // console.log(err, err.stack); // an error occurred
+  //  throw new Error(err);
+    console.log("an error occurred")
+  }
+   // successful response
+  else if(data.Item != null) {
+    //console.log(data.Item.Transcript.S);
+    transcript = data.Item.Transcript.S;
+    summary = data.Item.Summary.S;
+    console.log(transcript);
+  }
+})
+}
+catch(err) {
+  console.log("an errorrrr");
+}
+}
+
 //transcribe media file
   function transcribe(mediaFileUrl, transcriptionJobName, outputBucketName) {
   var transcribeservice = new AWS.TranscribeService({apiVersion: '2017-10-26'});
@@ -63,18 +98,45 @@ await s3.getObject(params_s3, function(err, data) {
 
 function summarize() {
 
-  var transcriptArray = new Array();
-  var transcript1 = transcript;
+  summary = "";
   const limit = 5000;
 
-  while(transcript1.length>limit) {
-  var slice = transcript1.slice(0, limit);
-  transcript1 = transcript1.slice(limit);
-  transcriptArray.push(slice);
+
+
+
+  var waitingArray = new Array();
+  transcriptArray = transcript.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|");
+  while(transcriptArray.join(" ").length>=limit) {
+  //  console.log(transcriptArray.join("").length);
+
+    var part = transcriptArray[0];
+    var i = 1;
+    while(part.length + transcriptArray[i].length < limit) {
+      part = part + " " + transcriptArray[i];
+      i += 1;
+    }
+    waitingArray.push(part);
+    transcriptArray = transcriptArray.slice(i);
   }
-  transcriptArray.push(transcript1);
-  summary = " ";
-  transcriptArray.forEach(getSummary);
+  //console.log(transcriptArray.join("")+"last");
+  waitingArray.push(transcriptArray.join(" "));
+
+
+
+
+
+
+  // var transcript1 = transcript;
+  //
+  // while(transcript1.length>limit) {
+  // var slice = transcript1.slice(0, limit);
+  // transcript1 = transcript1.slice(limit);
+  // transcriptArray.push(slice);
+  // }
+  // transcriptArray.push(transcript1);
+  //  summary = " ";
+
+   waitingArray.forEach(getSummary);
 
 
   // function print(item, index) {
@@ -83,9 +145,11 @@ function summarize() {
   // }
 
 async function getSummary(item, index) {
+
   await sleep(index*500);
-  //console.log(item);
-  //console.log("parttttttt");
+  console.log(item);
+  console.log("parttttttt");
+  console.log(typeof item);
   var req = unirest("GET", "https://aylien-text.p.rapidapi.com/summarize");
 
 req.query({
@@ -103,12 +167,12 @@ req.headers({
 req.end(function (res) {
 	if (res.error) throw new Error(res.error);
 
-//	console.log(res.body);
-  //console.log(res.body.sentences);
+	console.log(res.body);
+  console.log(res.body.sentences);
   nextPart = JSON.stringify(res.body.sentences);
   nextPart = nextPart.slice(2, nextPart.length-1);
 //  nextPart = nextPart;
-//  console.log("nexrtttttt:" + nextPart);
+  console.log("nexrtttttt:" + nextPart);
   summary = summary.slice(0, summary.length-1);
   summary = summary + "," + nextPart;
   //console.log("test1: " + summary);
@@ -119,7 +183,6 @@ req.end(function (res) {
 
 //Put data to DynamoDB
 function upload() {
-  var ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
   var params_ddb = {
     TableName: 'Transcripts',
     Item: {
@@ -143,6 +206,8 @@ exports.handler = async (event) => {
     if (event.httpMethod === "GET") {
      source_video_url = event.queryStringParameters.link;
      key = source_video_url.slice(0, source_video_url.length-19);
+     await getFromDB();
+     if(transcript === "sample transcript") {
     // transcribe(video_s3_url, transcriptionJobName, outputBucketName);
     // await sleep(15000);
     getFile();
@@ -152,6 +217,7 @@ exports.handler = async (event) => {
    upload();
   // console.log(summary);
    await sleep(1000);
+ }
         return getTranscribe(event);
     }
 };
@@ -170,6 +236,10 @@ exports.handler = async (event) => {
      };
  }
 async function test() {
+  source_video_url = "https://d1b5wfhwav7hwn.cloudfront.net/content/8b2662bd-ef2e-4e5c-859e-d6c4aa553d7f/20/05/08/09/8b2662bd-ef2e-4e5c-859e-d6c4aa553d7f_1_200508T095841900Z.mp4?Expires=1589629852";
+  key = source_video_url.slice(0, source_video_url.length-19);
+  //getFromDB();
+
  getFile();
  await sleep(5000);
 summarize();
