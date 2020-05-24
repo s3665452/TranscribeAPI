@@ -1,16 +1,17 @@
 var AWS = require('aws-sdk');
 var unirest = require("unirest");
 //video in s3 bucket
-var video_s3_url = "s3://s3665452-video/64a6f77f-e43f-4ff8-bda0-b02a082aa71b_1_200513T231553044Z.mp4%3FExpires=1590147395&Signature=HfG9ZVkn219xdInw~WRrjBUouFJTWGWOw8Gv2zr96KAhTSvfmqZ0PM3CcfCdabYgHQQw8ye2rFZvGnqSivVywTAXF0IDIg-gwYym-LXQ~uawE-eAMG~KgCG5Ur~mvCQzzwM60i6jLCq313brX1"; //'https://s3665452-video.s3.amazonaws.com/6cd99979-e6c6-4f16-94f0-826ab34f55ff_1_200402T084119924Z.mp4';
+var video_s3_url = "s3://s3665452-video/"; //   "s3://s3665452-video/64a6f77f-e43f-4ff8-bda0-b02a082aa71b_1_200513T231553044Z.mp4%3FExpires=1590147395&Signature=HfG9ZVkn219xdInw~WRrjBUouFJTWGWOw8Gv2zr96KAhTSvfmqZ0PM3CcfCdabYgHQQw8ye2rFZvGnqSivVywTAXF0IDIg-gwYym-LXQ~uawE-eAMG~KgCG5Ur~mvCQzzwM60i6jLCq313brX1"; //'https://s3665452-video.s3.amazonaws.com/6cd99979-e6c6-4f16-94f0-826ab34f55ff_1_200402T084119924Z.mp4';
 var transcript = 'sample transcript';
 var summary = 'sample summary';
 //video url from webpage
 var source_video_url = "sample source url";
-var transcriptionJobName = 'TranscribeTest1';
+var transcriptionJobName = 'TranscribeDemo';
 var outputBucketName = 's3665452-transcript';
 var nextPart = "sample";
 var key = "sample key";
 var transcriptArray = new Array();
+var hash = "hash";
 
 //wait ms milliseconds
 function sleep(ms) {
@@ -18,11 +19,12 @@ function sleep(ms) {
 }
 
 //set up amazon
+//[5]"AWS Documentation", Docs.aws.amazon.com, 2020. [Online]. Available: https://docs.aws.amazon.com/. [Accessed: 24- May- 2020].
 AWS.config.update({
   region: 'us-east-1',
-  accessKeyId: 'ASIA4CWIRGO4MHDDEV6D',
-  secretAccessKey: '8kTfIFUtJKJO+AxIMCnEd10rBsOQgI8JfsHWKuMI',
-  sessionToken: 'FwoGZXIvYXdzEAoaDOZONRb9qPjTpXh2XSLLAT/bmtfF0S8d+a4Jw38j3Ze+xzuCz8FiWcYNFFEQdpn9RGL9ru2cGwgyghjb8t+5Wls6CGuPjDXj2lJ9nxCcCkosjTvCFGWHqlxu9I7XF12tj3zRvvSS0pSPNoKCsh4KwT+0pktV5m3mEoJi8mzmG3izuNxEBHsmoD58A0Ed+ZOV5p3I8k9lciefHtx2ZymlDuFUXXpB5hqwJxji2kdPzCfRfppJn4WlTkx/3T6hWICBOwU2TzzYpLDvRV8/63Dx/nzD+j8jDEJhWYncKM7RofYFMi2pH6R7JQ1j6FU8+SyLvDuhE8XVYzQJXPhQOgixVLAHjmrkL9Y6oYrlyNLMGCg='
+  accessKeyId: 'ASIA4CWIRGO4O5FGULHJ',
+  secretAccessKey: 'Tw/+FBxBx1mSvgo7yWpVb+Gydbhijq96QE8Yow/x',
+  sessionToken: 'FwoGZXIvYXdzECMaDKC1dRi5Kq9RosUEGiLLAXJtz8q/OV6rK5V7Xtxc8Yj2epL/jlAc671aJz83y2LhIBPK44ShCzZ7qMciJDIn3hBPe8ELjlb84jNxO3Z2Z9GEWdwe0Hv4Bs22LoJ6PbNTRknfnU0B4IcZn/x4q5u4WlJ5nkcsDim02C1Ei8s+KOg7/z61yqZZ9ebTHk6R4uGUASD5TuT/41ebZ5cFbmhQcdE2PIQWqKGP/VcDkLkznzLr9EuP075e6wxnKv4giVs2P2TsH44sg/+8QIAc5KP0e8JNn1bEnejD8QIOKLqVp/YFMi23Pmu1mk87hVlHMEIqLzgwX+URmnyF3KAWSBFSHMz8qrfSKFvz/Rz8alpPLy0='
 });
 
 //DynamoDB
@@ -39,7 +41,7 @@ function getFromDB() {
     },
     TableName: "Transcripts"
   };
-//if successful, retrieve transcript and summary
+  //if successful, retrieve transcript and summary
   ddb.getItem(params, function(err, data) {
     if (err) {
       console.log("an error occurred")
@@ -84,7 +86,7 @@ async function getFile() {
   });
   var params_s3 = await {
     Bucket: outputBucketName,
-    Key: transcriptionJobName + '.json'
+    Key: hash + '.json'
   };
   await s3.getObject(params_s3, function(err, data) {
     if (err) console.log(err, err.stack); // an error occurred
@@ -95,6 +97,7 @@ async function getFile() {
 }
 
 //get summary from video transcript
+//[11]"Text Analysis API Documentation", RapidAPI. [Online]. Available: https://rapidapi.com/aylien/api/text-analysis?endpoint=53aa5a0ee4b0f2c975470d75. [Accessed: 24- May- 2020].
 function summarize() {
   summary = "";
   //api limit of characters per request
@@ -175,18 +178,24 @@ function upload() {
   });
 }
 
+
 //Handler of the API
+//[14]S. Williams, "How to build an API with Lambdas and API Gateway", freeCodeCamp.org, 2018. [Online]. Available: https://www.freecodecamp.org/news/building-an-api-with-lambdas-and-api-gateway-11254e23b703/. [Accessed: 24- May- 2020].
 exports.handler = async (event) => {
   if (event.httpMethod === "GET") {
     //get video url and make a key by removing the last 19 characters (time stamp)
     source_video_url = event.queryStringParameters.link;
     key = source_video_url.slice(0, source_video_url.length - 19);
+    hash = key.slice(100, 106);
+    video_s3_url = "s3://s3665452-video/" + hash;
+    transcript = "sample transcript";
     //see if key and data exists in DynamoDB
     await getFromDB();
+    await sleep(2000);
     //if transcript did not update from DynamoDB, start analysing the video
-    if (transcript === "sample transcript") {
-      // transcribe(video_s3_url, transcriptionJobName, outputBucketName);
-      // await sleep(15000);
+    if (transcript.length < 30) {
+      transcribe(video_s3_url, hash, outputBucketName);
+      await sleep(700000);
       getFile();
       await sleep(5000);
       summarize();
@@ -212,18 +221,3 @@ const getTranscribe = event => {
     body: JSON.stringify(transcribe)
   };
 }
-
-async function test() {
-  source_video_url = "https://d1b5wfhwav7hwn.cloudfront.net/content/8b2662bd-ef2e-4e5c-859e-d6c4aa553d7f/20/05/08/09/8b2662bd-ef2e-4e5c-859e-d6c4aa553d7f_1_200508T095841900Z.mp4?Expires=1589629852";
-  key = source_video_url.slice(0, source_video_url.length - 19);
-  //getFromDB();
-  //transcribe(video_s3_url, transcriptionJobName, outputBucketName);
-   getFile();
-  await sleep(5000);
-  summarize();
-  await sleep(5000);
-  upload();
-  console.log(summary);
-}
-
-//test();
